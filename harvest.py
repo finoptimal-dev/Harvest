@@ -193,20 +193,21 @@ class Invoice(HarvestItemBase):
 
 
 class Harvest(object):
-    def __init__(self,uri,email,password):
-        self.uri = uri
-        self.headers={
-            'Authorization':'Basic '+b64encode('%s:%s' % (email,password)),
-            'Accept':'application/xml',
-            'Content-Type':'application/xml',
-            'User-Agent':'harvest.py',
-        }
+    # def __init__(self, uri, email, password, access_token):
+    def __init__(self, uri, access_token): # access_token
+        self.uri = uri + "?access_token=" + access_token
+        # self.headers={
+        #     'Authorization':'Basic '+b64encode('%s:%s' % (email,password)),
+        #     'Accept':'application/xml',
+        #     'Content-Type':'application/xml',
+        #     'User-Agent':'harvest.py',
+        # }
 
         # create getters
         for klass in instance_classes:
             self._create_getters( klass )
 
-    def _create_getters(self,klass):
+    def _create_getters(self, klass):
         '''
         This method creates both the singular and plural getters for various
         Harvest object classes.
@@ -215,25 +216,23 @@ class Harvest(object):
         flag_name = '_got_' + klass.element_name
         cache_name = '_' + klass.element_name
 
-        setattr( self, cache_name, {} )
-        setattr( self, flag_name, False )
-
-        cache = getattr( self, cache_name )
-
+        setattr(self, cache_name, {})
+        setattr(self, flag_name, False)
+        cache = getattr(self, cache_name)
         def _get_item(id):
             if id in cache:
                 return cache[id]
             else:
                 url = '%s/%d' % (klass.base_url, id)
-                item = self._get_element_values( url, klass.element_name ).next()
-                item = klass( self, item )
+                item = self._get_element_values(url, klass.element_name).next()
+                item = klass(self, item)
                 cache[id] = item
                 return item
 
-        setattr( self, klass.element_name, _get_item )
+        setattr(self, klass.element_name, _get_item)
 
         def _get_items():
-            if getattr( self, flag_name ):
+            if getattr(self, flag_name):
                 for item in cache.values():
                     yield item
             else:
@@ -244,7 +243,7 @@ class Harvest(object):
 
                 setattr( self, flag_name, True )
 
-        setattr( self, klass.plural_name, _get_items )
+        setattr(self, klass.plural_name, _get_items)
 
     def find_user(self, first_name, last_name):
         for person in self.users():
@@ -253,32 +252,33 @@ class Harvest(object):
 
         return None
 
-    def _time_entries(self,root,start,end):
+    def _time_entries(self, root, start, end):
         url = root + 'entries?from=%s&to=%s' % (start.strftime('%Y%m%d'), end.strftime('%Y%m%d'))
 
-        for element in self._get_element_values( url, 'day-entry' ):
-            yield Entry( self, element )
+        for element in self._get_element_values(url, 'day-entry'):
+            yield Entry(self, element)
 
-    def _request(self,url):
-        request = urllib2.Request( url=self.uri+url, headers=self.headers )
+    def _request(self, url):
+        request = urllib2.Request(url=self.uri+url)
+        # request = urllib2.Request(url=self.uri+url, headers=self.headers)
         try:
             r = urllib2.urlopen(request)
             xml = r.read()
-            return parseString( xml )
+            return parseString(xml)
         except urllib2.URLError as e:
             raise HarvestConnectionError(e)
 
     def _get_element_values(self,url,tagname):
         def get_element(element):
-            text = ''.join( n.data for n in element.childNodes if n.nodeType == n.TEXT_NODE )
+            text = ''.join(n.data for n in element.childNodes if n.nodeType == n.TEXT_NODE)
             try:
                 entry_type = element.getAttribute('type')
                 if entry_type == 'integer':
                     try:
-                        return int( text )
+                        return int(text)
                     except ValueError:
                         return 0
-                elif entry_type in ('date','datetime'):
+                elif entry_type in ('date', 'datetime'):
                     return parseDate( text )
                 elif entry_type == 'boolean':
                     try:
@@ -287,7 +287,7 @@ class Harvest(object):
                         return False
                 elif entry_type == 'decimal':
                     try:
-                        return float( text )
+                        return float(text)
                     except ValueError:
                         return 0.0
                 else:
@@ -301,7 +301,7 @@ class Harvest(object):
             for attr in entry.childNodes:
                 if attr.nodeType == attr.ELEMENT_NODE:
                     tag = attr.tagName
-                    value[tag] = get_element( attr )
+                    value[tag] = get_element(attr)
 
             if value:
                 yield value
