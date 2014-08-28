@@ -193,15 +193,12 @@ class Invoice(HarvestItemBase):
 
 
 class Harvest(object):
-    # def __init__(self, uri, email, password, access_token):
-    def __init__(self, uri, access_token): # access_token
+    def __init__(self, uri, access_token):
         self.access_token = access_token
-        self.uri = uri # + "?access_token=" + access_token
-        self.headers={
-        #     'Authorization':'Basic '+b64encode('%s:%s' % (email,password)),
+        self.uri = uri
+        self.headers = {
             "Accept": "application/xml",
             'Content-Type':'application/xml'
-        #     'User-Agent':'harvest.py',
         }
 
         # create getters
@@ -263,11 +260,7 @@ class Harvest(object):
         request = urllib2.Request(url=self.uri + url + "?access_token=" + self.access_token, headers=self.headers)
         try:
             r = urllib2.urlopen(request)
-            print "*** uri %s and url %s" % (self.uri, url)
             xml = r.read()
-            print "******"
-            print xml
-
             return parseString(xml)
         except urllib2.URLError as e:
             raise HarvestConnectionError(e)

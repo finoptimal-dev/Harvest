@@ -17,31 +17,20 @@ class OAuthHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
   def do_GET(self):
     if self.path == "/":
-      self.send_response(200)
-      self.end_headers()
-      self.wfile.write("<html><head><title>Test1</title></head><body><a href='%s'>Connect</a></body></html>" % self.link)
+      self.generate_page("<a href='%s'>Connect / ReConnect</a>" % self.link)
     elif CALLBACK_URL in self.path:
       self.get_new_token()
 
-      #example
-      # time.sleep(17)
-      
-      from datetime import datetime, timedelta
-      import time
+      #########################################################################################################
       
       h = harvest.Harvest("https://api.harvestapp.com", self.get_tokens()["access_token"])
-      while True:
-        total = 0
-        dose = 0
+      for p in h.projects():
+        print p
 
-        start = datetime.today().replace(hour=0, minute=0, second=0)
-        end = start + timedelta(1)
-        for user in h.users():
-          for entry in user.entries(start, end):
-            total += entry.hours
+      for u in h.users():
+        print u
 
-        text = '%0.02f' % total
-        print text
+      ########################################################################################################
 
     elif REFRESH_URL in self.path:
       self.refresh_token()
@@ -50,34 +39,34 @@ class OAuthHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     else:
       self.send_response(404)
       self.end_headers()
-      self.wfile.write("<html><head><title>Test1</title></head><body>404 THE PATH %s</body></html>" % self.path)
+      self.wfile.write("<html><head><title>Harvest API OAuth2 client</title></head><body>404 <br /> %s</body></html>" % self.path)
   
   def refresh_token(self):
-    tokens = get_tokens()
+    tokens = self.get_tokens()
     body = "refresh_token=%s&client_id=%s&client_secret=%s&grant_type=refresh_token" % (tokens["refresh_token"], secrets.CLIENT_ID, secrets.CLIENT_SECRET)
     headers = {
       "Content-Type": "application/x-www-form-urlencoded",
       "Accept": "application/json"
     }
 
-    self.data = requests.post("https://api.harvestapp.com/oauth2/token", headers=headers, data=body, verify=False)
-    json_data = json.loads(self.data.content)
+    data = requests.post("https://api.harvestapp.com/oauth2/token", headers=headers, data=body, verify=False)
+    json_data = json.loads(data.content)
     self.write_tokens({"access_token": json_data["access_token"], "refresh_token": json_data["refresh_token"]})
-  
+    
+    self.generate_page("The token has been refreshed.")
+
   def get_new_token(self):
     code_param = "code="
     left_index = self.path.index(code_param)
     right_index = self.path.index("&")
     code = self.path[left_index + len(code_param):right_index]
-    self.send_response(200)
-    self.end_headers()
-    self.wfile.write("<html><head><title>Test1</title></head><body>THIS IS CALLBACK URL, code is: %s</body></html>" % code)
-
     body = "code=%s&client_id=%s&client_secret=%s&redirect_uri=%s&grant_type=authorization_code" % (code, secrets.CLIENT_ID, secrets.CLIENT_SECRET, FULL_CALLBACK_URL)
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     self.data = requests.post("https://api.harvestapp.com/oauth2/token", headers=headers, data=body, verify=False)
     json_data = json.loads(self.data.content)
     self.write_tokens({"access_token": json_data["access_token"], "refresh_token": json_data["refresh_token"]})
+
+    self.generate_page("Now you're connected to Harvest. Go to <a href='/my_info'>my info</a>")
 
   def my_info(self):
     headers = {
@@ -86,34 +75,19 @@ class OAuthHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     data2 = requests.get("https://api.harvestapp.com/account/who_am_i?access_token=" + self.get_tokens()["access_token"], headers=headers).content
     data = json.loads(data2)
-    self.send_response(200)
-    self.end_headers()
-    self.wfile.write("<html><head><title>Test1</title></head><body> \
-                      <p>Hello! Your Harvest company is called <strong>%s</strong></p> \
+    res = "<p>Hello! Your Harvest company is called <strong>%s</strong></p> \
                       <p>You are <strong>%s %s</strong></p> \
-                      <p>This is your avatar: <br /><img src='%s' /></p> \
                       <hr> \
-                      <p><a href='/refresh'>Refresh the token</a> or <a href='/'>go back to the main page</a></p> \
-                      </body></html>" \
-                      % (data["company"]["name"], data["user"]["first_name"], data["user"]["last_name"], data["user"]["avatar_url"]))
+                      <p><a href='/refresh'>Refresh the token</a></p>" \
+                      % (data["company"]["name"], data["user"]["first_name"], data["user"]["last_name"])
+    
+    self.generate_page(res)
 
+  
   def generate_page(self, html_code):
-    pass
-
-  def response_page(self):
     self.send_response(200)
     self.end_headers()
-    if self.data["error"] is None:
-      a = "<h2>Response data</h2>\
-          <ul>\
-            <li>Access token: %s</li>\
-            <li>Refresh token: %s</li>\
-          </ul>\
-          <a href='/authenticated'>See an authenticated call</a>" % (self.data["access_token"], self.data["refresh_token"])
-    else:
-      a = "<h2>%s: %s</h2>" % (self.data["error"], self.data["error_description"])
-
-    self.wfile.write("<html><head><title>Test1</title></head><body>%s</body></html>" % (a))
+    self.wfile.write("<html><head><title>Harvest API OAuth2 client</title></head><body>%s</body></html>" % html_code)
 
   def write_tokens(self, data):
     with open("tokens.json", "w") as json_file:
