@@ -21,14 +21,21 @@ class OAuthHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     elif CALLBACK_URL in self.path:
       self.get_new_token()
 
+      ######### test #################
       #########################################################################################################
       
       h = harvest.Harvest("https://api.harvestapp.com", self.get_tokens()["access_token"])
       for p in h.projects():
         print p
 
+      import datetime
+
       for u in h.users():
         print u
+        date1 = datetime.datetime(2013, 01, 01)
+        date2 = datetime.datetime(2014, 10, 10)
+        for e in u.entries(date1, date2):
+          print e
 
       ########################################################################################################
 

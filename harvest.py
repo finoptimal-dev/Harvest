@@ -257,7 +257,13 @@ class Harvest(object):
             yield Entry(self, element)
 
     def _request(self, url):
-        request = urllib2.Request(url=self.uri + url + "?access_token=" + self.access_token, headers=self.headers)
+        if "?" in url:
+            separator = "&"
+        else:
+            separator = "?"
+        
+        full_url = self.uri + url + separator + "access_token=" + self.access_token
+        request = urllib2.Request(url=full_url, headers=self.headers)
         try:
             r = urllib2.urlopen(request)
             xml = r.read()
