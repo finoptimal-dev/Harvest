@@ -8,6 +8,7 @@ from base64 import b64encode
 from dateutil.parser import parse as parseDate
 from xml.dom.minidom import parseString
 import json
+from oauth2 import TokensManager
 
 class HarvestError(Exception):
     pass
@@ -196,6 +197,7 @@ class Harvest(object):
     def __init__(self, uri, access_token):
         self.access_token = access_token
         self.uri = uri
+        # todo - a callback function to refresh the tokens
         self.headers = {
             "Accept": "application/xml",
             'Content-Type':'application/xml'
@@ -265,6 +267,16 @@ class Harvest(object):
         full_url = self.uri + url + separator + "access_token=" + self.access_token
         request = urllib2.Request(url=full_url, headers=self.headers)
         try:
+            # todo
+            # if refresh_token is fresh then the access token can be refreshed 
+            # by sending a GET request to a specific url according to the spec of OAuth2
+            # but if isn't fresh then an user must re-authenticate to obtain the new access and refresh tokens
+            if TokensManager.is_refresh_token_fresh():
+                TokensManager.refresh_access_token_by_demand()
+            else:
+                raise HarvestError("You must re-authenticate first by going to http://localhost:3000")
+            
+                    
             r = urllib2.urlopen(request)
             xml = r.read()
             return parseString(xml)
