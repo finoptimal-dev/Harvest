@@ -267,7 +267,6 @@ class Harvest(object):
         full_url = self.uri + url + separator + "access_token=" + self.access_token
         request = urllib2.Request(url=full_url, headers=self.headers)
         try:
-            # todo
             # if refresh_token is fresh then the access token can be refreshed 
             # by sending a GET request to a specific url according to the spec of OAuth2
             # but if isn't fresh then an user must re-authenticate to obtain the new access and refresh tokens
@@ -275,7 +274,6 @@ class Harvest(object):
                 TokensManager.refresh_access_token_by_demand()
             else:
                 raise HarvestError("You must re-authenticate first by going to http://localhost:3000")
-            
                     
             r = urllib2.urlopen(request)
             xml = r.read()
