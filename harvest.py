@@ -13,10 +13,8 @@ from oauth2 import TokensManager
 class HarvestError(Exception):
     pass
 
-
 class HarvestConnectionError(HarvestError):
     pass
-
 
 instance_classes = []
 class HarvestItemGetterable(type):
@@ -197,7 +195,6 @@ class Harvest(object):
     def __init__(self, uri, access_token):
         self.access_token = access_token
         self.uri = uri
-        # todo - a callback function to refresh the tokens
         self.headers = {
             "Accept": "application/xml",
             'Content-Type':'application/xml'

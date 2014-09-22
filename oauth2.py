@@ -6,6 +6,43 @@ import harvest
 import time
 import datetime
 from dateutil import parser
+import sys, getopt
+
+client_secret = ""
+client_id = ""
+tokens_json_file_name = ""
+harvest_host = ""
+
+def main():
+  """
+  The command line arguments:
+    -cs, --client_secret
+    -cid, --client_id 
+    -tf, --tokens_file 
+    -hh, --harvest_host 
+    -h, --help
+
+  All the arguments except the "help" are mandatory
+  """
+  from BaseHTTPServer import HTTPServer
+
+  parse_options()
+  server = HTTPServer(("localhost", 3000), OAuthHandler)
+  server.serve_forever()
+
+def parse_options():
+  arguments = sys.argv[1:]
+  options, remainder = getopt.getopt(arguments, "cs:cid:tf:hh:h", ["client_secret=", "client_id=", "tokens_file=", "harvest_host=", "help"])
+  options_formated = dict(options)
+  print_help = options_formated.get("-h", options_formated.get("--help", None))
+  if print_help is not None:
+    print "Usage:\n {0}{1}-cs, --client_secret [client secret]{1}-cid, --client_id [client id]{1}-tf, --tokens_file [full path to file with tokes]{1}-hh, --harvest_host [url of Harvest host]{1}-h, -help [print this]".format(sys.argv[0], "\n\t")
+    exit(0)
+  else:
+    client_secret = options_formated.get("-cs", options_formated.get("--client_secret", None))
+    client_id = options_formated.get("-cid", options_formated.get("--client_id", None))
+    tokens_json_file_name = options_formated.get("-tf", options_formated.get("--tokens_file", None))
+    harvest_host = options_formated.get("-hh", options_formated.get("--harvest_host", None))
 
 class OAuthHandler(BaseHTTPServer.BaseHTTPRequestHandler):
   callback_url = "/harvest_callback"
@@ -171,6 +208,5 @@ class TokensManager():
 
 
 if __name__ == "__main__":
-  from BaseHTTPServer import HTTPServer
-  server = HTTPServer(("localhost", 3000), OAuthHandler)
-  server.serve_forever()
+  main()
+  
