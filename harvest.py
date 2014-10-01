@@ -7,13 +7,36 @@ from xml.dom.minidom import parseString
 import json
 import datetime
 from dateutil import parser
-import sys
+import os, sys
 from optparse import OptionParser
 
 client_secret = None
 client_id = None
 harvest_host = None
 tokens_file_name = None
+
+def get_authorized(c_id, c_secret, tokens_path, h_host):
+  """
+  Refresh the oauth tokens if necessary, I think....
+  """
+ 
+  global client_id
+  client_id        = c_id
+
+  global client_secret
+  client_secret    = c_secret
+
+  global tokens_file_name
+  tokens_file_name = tokens_path
+
+  global harvest_host
+  harvest_host     = h_host
+
+  print "Please navigate to localhost:3000 to authorize access to:"
+  print h_host
+  
+  server = BaseHTTPServer.HTTPServer(("localhost", 3000), OAuthHandler)
+  server.serve_forever()
 
 def main():
   """
@@ -525,6 +548,35 @@ class TokensManager(object):
   def write_tokens(data):
     with open(tokens_file_name, "w") as json_file:
       json.dump(data, json_file)
+
+def get_session(api_creds, token_path, harvest_host_prefix):
+  """
+  If the token_path exists, (get or) refresh the token (from) there. If not,
+   go through the authorization workflow.
+  """
+  
+  global tokens_file_name
+  tokens_file_name = token_path
+
+  h_host  = "https://%s.harvestapp.com" % harvest_host_prefix
+
+  if not os.path.exists(token_path):
+    # This should give the client_token_path a fresh access token from
+    #  scratch, rather than refreshing an existing token.
+    get_authorized(api_creds['client_id'],
+                   api_creds['client_secret'],
+                   token_path,
+                   h_host)
+
+  # Refresh the access token if necessary
+  TokensManager.refresh_access_token_by_demand()
+
+  # Then...
+  access_token = TokensManager.get_tokens()["access_token"]["value"]
+
+  # And finally, the moment we've all been waiting for...
+  return Harvest(h_host, access_token)
+
 
 if __name__ == "__main__":
   main()
